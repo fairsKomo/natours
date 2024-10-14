@@ -1,18 +1,21 @@
 const Tour = require('../models/tourModel');
+const APIFeatures = require('./../utils/apiFeatures');
+exports.alisTopTours = (req, res, next) => {
+  req.query.limit = '5';
+  req.query.sort = '-ratingAverage,price';
+  req.query.fields = 'duration,name,price,ratingAverage,description';
+  next();
+};
 
 exports.getAllTOurs = async (req, res) => {
   try {
-    const queryObj = { ...req.query };
-    const execlude = ['page', 'limit', 'sort', 'fields'];
-
-    execlude.forEach((el) => delete queryObj[el]);
-
-    let queryStr = JSON.stringify(queryObj);
-    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
-
-    const query = Tour.find(JSON.parse(queryStr));
-
-    const tours = await query;
+    // Executing the query
+    const features = new APIFeatures(Tour.find(), req.query)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
+    const tours = await features.query;
 
     res.status(200).send({
       status: 'succes',

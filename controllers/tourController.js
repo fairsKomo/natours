@@ -68,3 +68,38 @@ exports.deleteTour = async (req, res) => {
     res.status(404).json({ status: 'Failed', message: error.message });
   }
 };
+
+exports.getTourStats = async (req, res) => { 
+  try {
+    const stats = await Tour.aggregate([
+      { $match: { ratingAverage: { $gte: 4.5 } } },
+      { $group: {
+          _id: '$difficulty',
+          numTours: {$sum: 1},
+          numRatings: {$sum: '$ratingQuantity'},
+          avgRating: { $avg: '$ratingAverage' },
+          avgPrice: { $avg: '$price' },
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' }
+        }
+      },
+      {$sort : {avgPrice: -1}}
+    ]);
+    
+    if (stats.length === 0) {
+      return res.status(404).json({
+        status: 'Success',
+        message: 'No tours found with the specified criteria.',
+        data: { stats: null }
+      });
+    }
+    
+    res.status(200).json({
+      status: 'Success',
+      data: { stats }
+    });
+  } catch (err) {
+    res.status(404).json({ status: 'Failed', message: err.message });
+  }
+};
+

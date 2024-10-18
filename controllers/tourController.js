@@ -83,7 +83,9 @@ exports.getTourStats = async (req, res) => {
           maxPrice: { $max: '$price' }
         }
       },
-      {$sort : {avgPrice: -1}}
+      {
+        $sort : {avgPrice: -1}
+      }
     ]);
     
     if (stats.length === 0) {
@@ -102,4 +104,60 @@ exports.getTourStats = async (req, res) => {
     res.status(404).json({ status: 'Failed', message: err.message });
   }
 };
+
+exports.getMonthlyPlan = async (req, res) => { 
+  try {
+    const year = req.params.year * 1;
+    const plan = await Tour.aggregate([
+      {
+        $unwind: '$startDates'
+      },
+      {
+        $match: {
+          startDates: {
+            $gte: new Date(`${year}-01-01`),
+            $lte: new Date(`${year}-12-31`),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {$month: '$startDates'},
+          numOfTours: {$sum: 1},
+          tours: {$push: '$name'},
+        },
+      },
+      {
+        $addFields: {
+          month: '$_id'
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+        },
+      },
+      {
+        $sort: {numOfTours: -1},
+      },
+    ]);
+    
+    if (plan.length === 0) {
+      return res.status(200).json({
+        status: 'Success',
+        message: 'No tours found with the specified criteria.',
+        data: { stats: null }
+      });
+    }
+    
+    res.status(200).json({
+      status: 'Success',
+      data: { plan }
+    });
+  } catch (err) {
+    res.status(404).json({ status: 'Failed', message: err.message });
+  }
+};
+
+
 

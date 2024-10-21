@@ -60,7 +60,34 @@ const tourSchema = new mongoose.Schema({
   startDates: {
     type: [Date],
   },
+  secretTour:{
+    type: Boolean,
+    default: false,
+  },
 });
+
+// QUERY MIDDLEWARE
+
+tourSchema.pre(/^find/, function(next){
+  this.find({secretTour: {$ne: true}});
+
+  this.start = Date.now();
+
+  next();
+});
+
+tourSchema.post(/^find/, function(doc, next){
+  console.log(`It took ${Date.now() - this.start} millisecondes to complete`);
+
+  next();
+});
+
+// AGGREGATION MIDDLEWARE
+
+tourSchema.pre('aggregate', function(next){
+  this.pipeline().unshift({$match: {secretTour: {$ne: true}}});
+  next();
+})
 
 const Tour = mongoose.model('Tour', tourSchema);
 
